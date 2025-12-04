@@ -14,7 +14,7 @@
     <!-- Configure Tailwind Dark Mode -->
     <script>
       tailwind.config = {
-        darkMode: 'class', // Enable dark mode based on 'dark' class on <html> or <body>
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
@@ -30,19 +30,17 @@
       }
     </script>
     <style>
-        /* Ensures smooth transitions for background and text colors */
         body {
             font-family: 'Inter', sans-serif;
             transition: background-color 0.5s, color 0.5s;
         }
-        /* Fixes issue where the react root might not fill the height */
         #root {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
         main {
-            flex-grow: 1; /* Makes sure main content takes up remaining space */
+            flex-grow: 1;
         }
     </style>
 </head>
@@ -51,12 +49,9 @@
 
     <!-- The complete React application code using Babel for JSX compilation -->
     <script type="text/babel">
-        // 1. Firebase Imports and Configuration (Simulated for this single file)
         const { useState, useEffect, useCallback, useMemo } = React;
         
-        // --- MOCK FIREBASE SETUP (For GitHub Pages deployment without external build) ---
-        // NOTE: Order persistence (saving/loading orders) WILL NOT WORK on a plain GitHub Pages deploy
-        // because the full Firebase SDK is not included, and database rules are not configured.
+        // --- MOCK FIREBASE SETUP FOR GITHUB PAGES (Extreme Stability) ---
         
         // Mocking constants and functions
         let app = null;
@@ -67,11 +62,11 @@
         const MOCK_UPI_ID = 'user@upi-id-instant';
         const MOCK_QR_CODE_URL = 'https://placehold.co/300x300/1D4ED8/FFFFFF?text=Scan+to+Pay';
         
-        // Mock functions to prevent crashes and provide basic behavior
+        // Mock functions
         const initializeApp = (config) => ({});
         const getFirestore = (app) => ({});
         const getAuth = (app) => ({});
-        const signInAnonymously = (auth) => console.log("Mock Auth: Anonymous sign-in.");
+        const signInAnonymously = (auth) => { console.log("Mock Auth: Anonymous sign-in attempt."); };
         const signInWithEmailAndPassword = (auth, email, password) => {
             if (email === ADMIN_EMAIL && password === '@aashish@') {
                 return { user: { uid: 'admin-123', email: ADMIN_EMAIL } };
@@ -79,8 +74,9 @@
             throw new Error("Invalid mock credentials.");
         };
         const onAuthStateChanged = (auth, callback) => {
-            setTimeout(() => callback({ uid: 'mock-user-123', email: 'test@user.com' }), 100);
-            return () => {};
+            // Mock initial user (anonymous sign-in)
+            setTimeout(() => callback({ uid: 'mock-user-123', email: 'anonymous@user.com' }), 50);
+            return () => {}; // Mock unsubscribe
         };
         const collection = (db, path) => ({ path });
         const query = (collectionRef) => ({ collectionRef });
@@ -91,9 +87,10 @@
         const serverTimestamp = () => ({ toDate: () => new Date() });
         const onSnapshot = (query, successCallback) => {
             const mockOrders = [
-                { id: 'o1', productName: 'Paracetamol Tablet 1', quantity: 2, productPrice: 8.50, customerName: 'Mock User', customerPhone: '9999900000', customerAddress: '123 Fake St', coordinates: '0, 0', timestamp: { toDate: () => new Date() }, userId: 'mock-user-123' },
+                { id: 'o1', productName: 'Paracetamol Tablet 1', quantity: 2, productPrice: 8.50, customerName: 'Mock User', customerPhone: '9999900000', customerAddress: '123 Fake St', coordinates: '0, 0', timestamp: { toDate: () => new Date(Date.now() - 60000) }, userId: 'mock-user-123' },
             ];
-            successCallback({ docs: mockOrders.map(o => ({ id: o.id, data: () => o })) });
+            // Simulate initial data fetch
+            setTimeout(() => successCallback({ docs: mockOrders.map(o => ({ id: o.id, data: () => o })) }), 50);
             return () => {};
         };
         // --- END MOCK FIREBASE SETUP ---
@@ -130,6 +127,15 @@
         ];
 
         // --- APP COMPONENTS ---
+        
+        const ErrorMessage = ({ error }) => (
+            <div className="p-8 bg-red-100 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-300 rounded-lg shadow-xl m-8 max-w-2xl mx-auto">
+                <h3 className="text-2xl font-bold mb-3">🚨 Application Initialization Failed</h3>
+                <p className="font-medium">This is likely a setup error related to the mock database on GitHub Pages.</p>
+                <p className="mt-2 text-sm italic">Details: {error}</p>
+                <p className="mt-4 text-xs font-mono">Check your browser's Developer Console (F12) for more detailed JavaScript errors.</p>
+            </div>
+        );
 
         const CurvedButton = ({ children, onClick, color = 'primary-blue', disabled = false, type = 'button' }) => (
             <button
@@ -360,301 +366,4 @@
                                 <input type="text" name="coordinates" value={formData.coordinates} onChange={handleChange} placeholder="Coordinates (Search Google Maps)" required 
                                     className={`w-full p-3 rounded-xl border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
                                 <div className="flex items-center space-x-4">
-                                    <label className={`font-medium ${textColor}`}>Quantity:</label>
-                                    <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} min="1" required 
-                                        className={`p-3 rounded-xl border w-20 text-center ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
-                                </div>
-                                
-                                {formError && <p className="text-red-500 font-medium">{formError}</p>}
-                                
-                                <div className="pt-4 flex justify-end">
-                                    <CurvedButton type="submit">
-                                        Proceed to Payment
-                                    </CurvedButton>
-                                </div>
-                            </form>
-                        )}
-
-                        {orderStep === 'payment' && (
-                            <div className="text-center space-y-6">
-                                <p className={`text-xl font-medium ${textColor}`}>
-                                    Please pay <span className="text-red-500 font-extrabold">₹{totalAmount}</span> to confirm.
-                                </p>
-                                
-                                <img src={MOCK_QR_CODE_URL} alt="Payment QR Code" className="mx-auto rounded-xl shadow-xl border-4 border-primary-blue"/>
-                                
-                                <p className={`text-lg font-mono ${textColor}`}>
-                                    UPI ID: <span className="font-bold text-primary-blue">{MOCK_UPI_ID}</span>
-                                </p>
-                                
-                                <CurvedButton onClick={handlePlaceOrder} disabled={isSubmitting}>
-                                    {isSubmitting ? 'Placing Order...' : 'I Have Paid & Place Order'}
-                                </CurvedButton>
-                                <p onClick={() => setOrderStep('form')} className="text-sm text-gray-500 cursor-pointer hover:text-primary-blue transition-colors">
-                                    &larr; Back to Order Details
-                                </p>
-                            </div>
-                        )}
-                        
-                        {orderStep === 'complete' && (
-                            <div className="text-center space-y-6">
-                                <svg className="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <h3 className="text-2xl font-bold text-green-500">Order Placed Successfully!</h3>
-                                <p className={`text-lg ${textColor}`}>Your mock order is being processed.</p>
-                                <CurvedButton onClick={onClose}>
-                                    Continue Shopping
-                                </CurvedButton>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const AuthPage = ({ theme, onNavigate, setMockUser }) => {
-            const [isLogin, setIsLogin] = useState(true);
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setError('');
-                setIsLoading(true);
-
-                // --- MOCK LOGIN LOGIC ---
-                try {
-                    if (isLogin) {
-                        const user = await signInWithEmailAndPassword(auth, email, password);
-                        setMockUser(user.user);
-                    } else {
-                        // Mock user creation
-                        setMockUser({ uid: 'new-user-' + Math.random().toString(36).substring(2, 6), email });
-                    }
-                    onNavigate('Home');
-                } catch (err) {
-                    setError('Mock Login Failed. Use the admin credentials or refresh for anonymous access.');
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const modalBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
-            const textColor = theme === 'dark' ? 'text-gray-100' : 'text-dark-navy';
-
-            return (
-                <div className="min-h-screen flex items-center justify-center p-4">
-                    <div className={`w-full max-w-md p-8 ${modalBg} rounded-3xl shadow-2xl transition-all duration-500`}>
-                        <h2 className={`text-4xl font-extrabold mb-6 text-center ${textColor}`}>{isLogin ? 'Login' : 'Sign Up'}</h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} 
-                                placeholder="Email Address" required 
-                                className={`w-full p-3 rounded-xl border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
-                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} 
-                                placeholder="Password" required 
-                                className={`w-full p-3 rounded-xl border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
-                            
-                            {error && <p className="text-red-500 font-medium text-sm pt-2">{error}</p>}
-
-                            <CurvedButton type="submit" disabled={isLoading} color="primary-blue">
-                                {isLoading ? 'Processing...' : isLogin ? 'Login' : 'Create Account'}
-                            </CurvedButton>
-                        </form>
-
-                        <p className={`mt-4 text-center text-sm ${textColor}`}>
-                            {isLogin ? "Don't have an account?" : "Already have an account?"}
-                            <button 
-                                onClick={() => setIsLogin(!isLogin)} 
-                                className="text-primary-blue hover:underline ml-2 font-medium transition-colors"
-                            >
-                                {isLogin ? 'Sign Up' : 'Login'}
-                            </button>
-                        </p>
-                        <p className={`mt-4 text-center text-xs text-gray-500`}>
-                            Admin Credentials for Mock Login: {ADMIN_EMAIL} / @aashish@
-                        </p>
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [theme, setTheme] = useState('light');
-            const [currentPage, setCurrentPage] = useState('Home');
-            const [currentUser, setCurrentUser] = useState(null);
-            const [isAuthReady, setIsAuthReady] = useState(false);
-            const [orders, setOrders] = useState([]);
-            const [selectedProduct, setSelectedProduct] = useState(null);
-
-            const userId = currentUser?.uid || null;
-            const isAdmin = currentUser?.email === ADMIN_EMAIL;
-            
-            const setMockUser = (user) => {
-                setCurrentUser(user);
-                setIsAuthReady(true);
-            };
-
-            // 2. Mock Setup
-            useEffect(() => {
-                const signInAndListen = async () => {
-                    await signInAnonymously(auth);
-                };
-                signInAndListen();
-                
-                const unsubscribe = onAuthStateChanged(auth, (user) => {
-                    setCurrentUser(user);
-                    setIsAuthReady(true);
-                    if (!user) { setCurrentPage('Auth'); } 
-                    else if (currentPage === 'Auth') { setCurrentPage('Home'); }
-                });
-                
-                const ordersUnsubscribe = onSnapshot(query(collection(db, 'mock-orders-path')), (snapshot) => {
-                    const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data()() }));
-                    fetchedOrders.sort((a, b) => b.timestamp?.toDate().getTime() - a.timestamp?.toDate().getTime());
-                    setOrders(fetchedOrders);
-                });
-
-                return () => { unsubscribe(); ordersUnsubscribe(); };
-            }, []);
-
-            // 3. Theming Logic
-            useEffect(() => {
-                document.body.className = theme === 'dark' ? 'dark bg-gray-900' : 'bg-gray-100';
-            }, [theme]);
-            
-            // 4. Navigation Function
-            const navigate = (page) => {
-                if (!currentUser && page !== 'Auth') {
-                    setCurrentPage('Auth');
-                } else if (page === 'Admin' && !isAdmin) {
-                    // Stay on current page if not admin
-                    return; 
-                } else {
-                    setCurrentPage(page);
-                }
-            };
-            
-            // 5. Direct Doctor Call Handler
-            const handleCallDoctor = () => {
-                // This will open the phone dialer on mobile devices
-                window.open(`tel:${DOCTOR_PHONE}`);
-            };
-
-            // 6. Render Content based on CurrentPage
-            const renderContent = () => {
-                switch (currentPage) {
-                    case 'Auth':
-                        return <AuthPage theme={theme} onNavigate={navigate} setMockUser={setMockUser} />;
-                    case 'Catalog':
-                        return <Catalog theme={theme} onSelectProduct={setSelectedProduct} />;
-                    case 'Orders':
-                        const userOrders = orders.filter(o => o.userId === userId);
-                        return <AdminOrdersView orders={userOrders} theme={theme} isAdmin={false} />;
-                    case 'Admin':
-                        if (isAdmin) {
-                            return <AdminOrdersView orders={orders} theme={theme} isAdmin={true} />;
-                        }
-                        return <div className="text-center p-12 text-red-500 font-bold">Access Denied: Admin role required.</div>;
-                    case 'Home':
-                    default:
-                        const textColor = theme === 'dark' ? 'text-gray-100' : 'text-dark-navy';
-                        return (
-                            <div className="p-8 sm:p-16 text-center transition-all duration-500">
-                                <h1 className={`text-5xl sm:text-7xl font-extrabold text-primary-blue mb-4`}>
-                                    INSTANT MEDICAL
-                                </h1>
-                                <p className={`text-xl sm:text-3xl font-medium ${textColor} mb-8`}>
-                                    Your seamless link to essential medicines and medical services.
-                                </p>
-                                <div className="space-y-4 sm:space-y-0 sm:space-x-6">
-                                    <CurvedButton onClick={() => navigate('Catalog')}>
-                                        Explore Catalog
-                                    </CurvedButton>
-                                    <CurvedButton onClick={handleCallDoctor} color="red-500">
-                                        Call Doctor Now
-                                    </CurvedButton>
-                                </div>
-                                <div className="mt-12 p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-xl mx-auto max-w-xl transition-all duration-500">
-                                    <h3 className="text-2xl font-bold mb-3 text-primary-blue">Need Urgent Advice?</h3>
-                                    <p className="text-lg text-gray-500">Click the button to connect instantly with a certified physician.</p>
-                                    <p className="font-mono text-xl mt-2 text-primary-blue">{DOCTOR_PHONE}</p>
-                                </div>
-                            </div>
-                        );
-                }
-            };
-
-            const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100';
-            const textColor = theme === 'dark' ? 'text-gray-100' : 'text-dark-navy';
-            const navItemClass = "px-4 py-2 rounded-xl transition-all duration-300 font-medium hover:bg-primary-blue hover:text-white cursor-pointer";
-
-            return (
-                <div className={`min-h-screen ${bgColor} ${textColor} font-sans transition-colors duration-500 flex flex-col`}>
-                    
-                    <header className={`sticky top-0 z-40 shadow-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} transition-all duration-500`}>
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center">
-                            
-                            <h1 onClick={() => navigate('Home')} className="text-3xl font-extrabold text-primary-blue cursor-pointer">
-                                INSTANT MEDICAL
-                            </h1>
-
-                            <nav className="flex space-x-2 sm:space-x-4 text-sm sm:text-base order-last sm:order-none w-full sm:w-auto mt-4 sm:mt-0">
-                                <span onClick={() => navigate('Home')} className={navItemClass}>Home</span>
-                                <span onClick={() => navigate('Catalog')} className={navItemClass}>Catalog</span>
-                                {currentUser && <span onClick={() => navigate('Orders')} className={navItemClass}>My Orders</span>}
-                                {isAdmin && <span onClick={() => navigate('Admin')} className={`${navItemClass} text-red-500 font-bold`}>Admin View</span>}
-                                <span onClick={handleCallDoctor} className={`${navItemClass} bg-red-500 text-white hover:bg-red-700`}>Call Doctor</span>
-                            </nav>
-
-                            <div className="flex items-center space-x-4">
-                                <ThemeToggle theme={theme} setTheme={setTheme} />
-                                {isAuthReady && (
-                                    currentUser ? (
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate max-w-[100px] sm:max-w-none">
-                                                {currentUser.email === ADMIN_EMAIL ? 'Admin' : 'User'}
-                                            </span>
-                                            <CurvedButton onClick={() => setMockUser(null)} color="red-500">
-                                                Logout
-                                            </CurvedButton>
-                                        </div>
-                                    ) : (
-                                        <CurvedButton onClick={() => navigate('Auth')} color="green-500">
-                                            Login/Signup
-                                        </CurvedButton>
-                                    )
-                                )}
-                            </div>
-                        </div>
-                    </header>
-                    
-                    <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-6 flex-grow">
-                        {!isAuthReady && <div className="text-center p-12 text-xl font-bold text-primary-blue">Loading Application...</div>}
-                        {isAuthReady && renderContent()}
-                    </main>
-
-                    {selectedProduct && (
-                        <ProductModal 
-                            theme={theme}
-                            product={selectedProduct}
-                            onClose={() => setSelectedProduct(null)}
-                            userId={userId}
-                        />
-                    )}
-                    
-                    <footer className="bg-gray-800 dark:bg-gray-950 text-white p-4 text-center mt-auto">
-                        <p className="text-sm">Instant Medical | Mock Application - For full functionality, integrate a live Firebase project.</p>
-                    </footer>
-
-                </div>
-            );
-        };
-
-        // Render the main application
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-
-    </script>
-</body>
-</html>
-
+                                    <label className={`font-medium ${textColor
